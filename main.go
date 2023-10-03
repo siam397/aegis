@@ -58,10 +58,6 @@ func tokenBucket(userId string) bool {
 	return true
 }
 
-// func _slidingWindowAlgorithm(userId string) {
-
-// }
-
 func leakingBucketAlgorithm(userId string) bool {
 	val := getApiCallCount(userId, MAX_LIMIT)
 	if val == 0 {
@@ -70,6 +66,10 @@ func leakingBucketAlgorithm(userId string) bool {
 	rdb.Set(ctx, userId, val-1, redis.KeepTTL)
 	return false
 }
+
+// func _slidingWindowAlgorithm(userId string) {
+
+// }
 
 // func _fixedWindowCounterAlgorithm(userId string) {
 
