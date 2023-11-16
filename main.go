@@ -12,8 +12,9 @@ import (
 )
 
 const (
-	MAX_LIMIT int64 = 5
-	TIMEOUT   int64 = 10
+	MAX_LIMIT   int64 = 5
+	WINDOW_SIZE int64 = 60
+	TIMEOUT     int64 = 10
 )
 
 var rdb *redis.Client
@@ -45,7 +46,8 @@ func request(c echo.Context) error {
 
 func rateLimitter(userId string) bool {
 	// return tokenBucket(userId)
-	return leakingBucketAlgorithm(userId)
+	// return leakingBucketAlgorithm(userId)
+	return fixedWindowCounterAlgorithm(userId)
 }
 
 func tokenBucket(userId string) bool {
@@ -71,14 +73,22 @@ func leakingBucketAlgorithm(userId string) bool {
 
 // }
 
-// func _fixedWindowCounterAlgorithm(userId string) {
-
-// }
+func fixedWindowCounterAlgorithm(userId string) bool {
+	currentTime := time.Now().Unix()
+	key := fmt.Sprintf("%s_%d", userId, currentTime/WINDOW_SIZE)
+	apiCalls := getApiCallCount(key, 1)
+	if apiCalls > MAX_LIMIT{
+		return true
+	}else{
+		rdb.Incr(ctx, key)
+	}
+	return false
+}
 
 func getApiCallCount(userId string, defaultValue int64) int64 {
 	count, err := rdb.Get(ctx, userId).Result()
 	if err == redis.Nil {
-		rdb.Set(ctx, userId, defaultValue, time.Duration(TIMEOUT)*time.Second)
+		rdb.Set(ctx, userId, defaultValue, time.Duration(WINDOW_SIZE)*time.Second)
 		return defaultValue
 	}
 	val, err := strconv.ParseInt(count, 10, 64)
