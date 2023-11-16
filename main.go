@@ -76,19 +76,23 @@ func leakingBucketAlgorithm(userId string) bool {
 func fixedWindowCounterAlgorithm(userId string) bool {
 	currentTime := time.Now().Unix()
 	key := fmt.Sprintf("%s_%d", userId, currentTime/WINDOW_SIZE)
-	apiCalls := getApiCallCount(key, 1)
-	if apiCalls > MAX_LIMIT{
+	apiCalls := getApiCallCount(key, 1, WINDOW_SIZE)
+	if apiCalls > MAX_LIMIT {
 		return true
-	}else{
+	} else {
 		rdb.Incr(ctx, key)
 	}
 	return false
 }
 
-func getApiCallCount(userId string, defaultValue int64) int64 {
+func getApiCallCount(userId string, defaultValue int64, args ...int64) int64 {
+	timeout := TIMEOUT
+	if len(args) > 0 {
+		timeout = args[0]
+	}
 	count, err := rdb.Get(ctx, userId).Result()
 	if err == redis.Nil {
-		rdb.Set(ctx, userId, defaultValue, time.Duration(WINDOW_SIZE)*time.Second)
+		rdb.Set(ctx, userId, defaultValue, time.Duration(timeout)*time.Second)
 		return defaultValue
 	}
 	val, err := strconv.ParseInt(count, 10, 64)
